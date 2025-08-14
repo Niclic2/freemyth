@@ -5,9 +5,7 @@ if (!connectionString) {
   throw new Error('DATABASE_URL is not set');
 }
 
-// Reuse pool across invocations (Serverless warm re-use)
 declare global {
-  // eslint-disable-next-line no-var
   var _pgPool: Pool | undefined;
 }
 
