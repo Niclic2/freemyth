@@ -1,68 +1,54 @@
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { GlowButton } from '../GlowButton';
 
+type DbNews = {
+  id: number;
+  title: string;
+  excerpt?: string | null;
+  content?: string | null;
+  author?: string;
+  category?: string;
+  icon?: string | null;
+  read_time?: string | null;
+  published: boolean;
+  created_at: string;
+  updated_at?: string | null;
+};
+
 export function NewsPage() {
-  const newsArticles = [
-    {
-      id: 1,
-      title: 'Обновление Разработки Царства Теней',
-      excerpt: 'Получите эксклюзивный взгляд на тёмные измерения и новые хоррор-механики, появляющиеся в нашем самом амбициозном проекте.',
-      date: '15 января 2024',
-      category: 'Разработка',
-      readTime: '5 мин чтения',
-      icon: '🌑',
-    },
-    {
-      id: 2,
-      title: 'Стихийная Сага: Раскрытие Боевой Системы',
-      excerpt: 'Откройте, как стихийные комбинации революционизируют стратегический бой в нашем предстоящем RPG приключении.',
-      date: '8 января 2024',
-      category: 'Особенности',
-      readTime: '4 мин чтения',
-      icon: '🔥',
-    },
-    {
-      id: 3,
-      title: 'Кристальные Легенды: Зимний Фестивальный Ивент',
-      excerpt: 'Присоединяйтесь к ограниченному по времени зимнему ивенту с эксклюзивными кристаллами, новыми квестами и праздничными наградами.',
-      date: '20 декабря 2023',
-      category: 'События',
-      readTime: '3 мин чтения',
-      icon: '💎',
-    },
-    {
-      id: 4,
-      title: 'Freemyth Studios Выигрывает Награду Инди Превосходства',
-      excerpt: 'Мы гордимся получением признания за наш вклад в инди-игровое сообщество и возрождение пиксельного искусства.',
-      date: '15 декабря 2023',
-      category: 'Награды',
-      readTime: '2 мин чтения',
-      icon: '🏆',
-    },
-    {
-      id: 5,
-      title: 'За Кулисами: Процесс Пиксельного Искусства',
-      excerpt: 'Погрузитесь глубоко в рабочий процесс нашего художника и изучите техники, которые оживляют наши миры.',
-      date: '1 декабря 2023',
-      category: 'За Кулисами',
-      readTime: '6 мин чтения',
-      icon: '🎨',
-    },
-    {
-      id: 6,
-      title: 'Бегуны Времени: Первые Кадры Геймплея',
-      excerpt: 'Смотрите первый официальный трейлер геймплея, демонстрирующий механики манипуляции времени и исследование параллельных миров.',
-      date: '22 ноября 2023',
-      category: 'Трейлеры',
-      readTime: '1 мин чтения',
-      icon: '⏰',
-    },
-  ];
+  const [news, setNews] = useState<DbNews[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const categories = ['Все', 'Разработка', 'Особенности', 'События', 'Награды', 'За Кулисами', 'Трейлеры'];
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await fetch('/.netlify/functions/news?limit=50');
+        if (!res.ok) throw new Error(`Ошибка: ${res.status}`);
+        const data: DbNews[] = await res.json();
+        if (!mounted) return;
+        setNews(Array.isArray(data) ? data : []);
+      } catch (e: any) {
+        if (!mounted) return;
+        setError(e.message || 'Неизвестная ошибка');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
-  const getCategoryColor = (category: string) => {
-    const colors = {
+  const featured = news.length > 0 ? news[0] : null;
+  const previous = news.length > 1 ? news.slice(1) : [];
+
+  const getCategoryColor = (category?: string) => {
+    const colors: Record<string, string> = {
       'Разработка': '#3b82f6',
       'Особенности': '#10b981',
       'События': '#f59e0b',
@@ -70,7 +56,8 @@ export function NewsPage() {
       'За Кулисами': '#ef4444',
       'Трейлеры': '#06b6d4',
     };
-    return colors[category as keyof typeof colors] || 'var(--freemyth-accent)';
+    if (!category) return 'var(--freemyth-accent)';
+    return colors[category] || 'var(--freemyth-accent)';
   };
 
   return (
@@ -82,182 +69,138 @@ export function NewsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <h1
-            className="text-5xl font-bold mb-6"
-            style={{ color: 'var(--freemyth-highlight)' }}
-          >
+          <h1 className="text-5xl font-bold mb-6" style={{ color: 'var(--freemyth-highlight)' }}>
             Последние Новости
           </h1>
-          <p
-            className="text-xl max-w-3xl mx-auto"
-            style={{ color: 'var(--freemyth-light)' }}
-          >
-            Оставайтесь в курсе последних разработок, объявлений и закулисного контента от Freemyth Studios.
+          <p className="text-xl max-w-3xl mx-auto" style={{ color: 'var(--freemyth-light)' }}>
+            Официальная лента — главная новость сверху и предыдущие записи внизу.
           </p>
         </motion.div>
 
-        {/* Category Filter */}
-        <motion.div
-          className="flex flex-wrap justify-center gap-4 mb-12"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          {categories.map((category, index) => (
-            <motion.button
-              key={category}
-              className="px-4 py-2 rounded-lg transition-all duration-300"
-              style={{
-                backgroundColor: index === 0 ? 'var(--freemyth-secondary)' : 'transparent',
-                color: index === 0 ? 'var(--freemyth-highlight)' : 'var(--freemyth-light)',
-                border: `2px solid ${index === 0 ? 'var(--freemyth-accent)' : 'var(--freemyth-secondary)'}`,
-              }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              {category}
-            </motion.button>
-          ))}
-        </motion.div>
+        {loading && (
+          <div className="mb-8 text-center" style={{ color: 'var(--freemyth-light)' }}>
+            Загрузка новостей...
+          </div>
+        )}
+        {error && (
+          <div className="mb-8 text-center" style={{ color: 'var(--freemyth-accent)' }}>
+            Ошибка при загрузке новостей: {error}
+          </div>
+        )}
 
-        {/* Featured Article */}
-        <motion.div
-          className="mb-16"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-        >
-          <div
-            className="rounded-lg overflow-hidden"
-            style={{ backgroundColor: 'var(--freemyth-secondary)' }}
-          >
-            <div className="md:flex">
-              <div className="md:w-1/2 flex items-center justify-center bg-gradient-to-br from-blue-900 to-purple-900 p-12">
-                <div className="text-center">
-                  <div className="text-8xl mb-4">{newsArticles[0].icon}</div>
-                  <div 
-                    className="text-2xl font-bold"
-                    style={{ color: 'var(--freemyth-highlight)' }}
-                  >
-                    Главная Новость
+        {/* Featured */}
+        {featured && (
+          <motion.div className="mb-12" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
+            <div className="rounded-lg overflow-hidden" style={{ backgroundColor: 'var(--freemyth-secondary)' }}>
+              <div className="md:flex">
+                <div className="md:w-1/2 flex items-center justify-center bg-gradient-to-br from-blue-900 to-purple-900 p-12">
+                  <div className="text-center">
+                    <div className="text-8xl mb-4">{featured.icon || '📰'}</div>
+                    <div className="text-2xl font-bold" style={{ color: 'var(--freemyth-highlight)' }}>
+                      Последняя Новость
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="md:w-1/2 p-8">
-                <div className="flex items-center gap-4 mb-4">
-                  <span
-                    className="px-3 py-1 rounded-full text-sm font-medium"
-                    style={{ 
-                      backgroundColor: getCategoryColor(newsArticles[0].category),
-                      color: 'white'
-                    }}
-                  >
-                    {newsArticles[0].category}
-                  </span>
-                  <span
-                    className="text-sm"
-                    style={{ color: 'var(--freemyth-accent)' }}
-                  >
-                    {newsArticles[0].date}
-                  </span>
-                </div>
-                <h2
-                  className="text-3xl font-bold mb-4"
-                  style={{ color: 'var(--freemyth-highlight)' }}
-                >
-                  {newsArticles[0].title}
-                </h2>
-                <p
-                  className="text-lg leading-relaxed mb-6"
-                  style={{ color: 'var(--freemyth-light)' }}
-                >
-                  {newsArticles[0].excerpt}
-                </p>
-                <div className="flex items-center justify-between">
-                  <GlowButton>Читать Полную Статью</GlowButton>
-                  <span
-                    className="text-sm"
-                    style={{ color: 'var(--freemyth-accent)' }}
-                  >
-                    {newsArticles[0].readTime}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
 
-        {/* News Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {newsArticles.slice(1).map((article, index) => (
-            <motion.article
-              key={article.id}
-              className="rounded-lg overflow-hidden"
-              style={{ backgroundColor: 'var(--freemyth-secondary)' }}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.6 + index * 0.1 }}
-              whileHover={{ 
-                scale: 1.03, 
-                boxShadow: '0 10px 30px rgba(113, 122, 125, 0.3)',
-                transition: { duration: 0.2 }
-              }}
-            >
-              <div className="relative h-48 overflow-hidden flex items-center justify-center bg-gradient-to-br from-blue-900 to-purple-900">
-                <div className="text-center">
-                  <div className="text-6xl mb-2">{article.icon}</div>
-                  <div className="absolute top-4 left-4">
+                <div className="md:w-1/2 p-8">
+                  <div className="flex items-center gap-4 mb-4">
                     <span
-                      className="px-2 py-1 rounded text-xs font-medium"
-                      style={{ 
-                        backgroundColor: getCategoryColor(article.category),
-                        color: 'white'
-                      }}
+                      className="px-3 py-1 rounded-full text-sm font-medium"
+                      style={{ backgroundColor: getCategoryColor(featured.category || featured.author || 'Из базы'), color: 'white' }}
                     >
-                      {article.category}
+                      {featured.category || featured.author || 'Из базы'}
+                    </span>
+                    <span className="text-sm" style={{ color: 'var(--freemyth-accent)' }}>
+                      {new Date(featured.created_at).toLocaleString()}
+                    </span>
+                  </div>
+
+                  <h2 className="text-3xl font-bold mb-4" style={{ color: 'var(--freemyth-highlight)' }}>
+                    {featured.title}
+                  </h2>
+
+                  <p className="text-lg leading-relaxed mb-6" style={{ color: 'var(--freemyth-light)' }}>
+                    {featured.excerpt ? featured.excerpt : summarize(featured.content || '', 350)}
+                  </p>
+
+                  <div className="flex items-center justify-between">
+                    <GlowButton>Читать Полную Статью</GlowButton>
+                    <span className="text-sm" style={{ color: 'var(--freemyth-accent)' }}>
+                      {featured.read_time || estimateReadTime(featured.content || '')}
                     </span>
                   </div>
                 </div>
               </div>
-              
+            </div>
+          </motion.div>
+        )}
+
+        {/* Grid: 1 / 2 / 3 columns */}
+        <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
+          {previous.length === 0 && !loading && (
+            <div className="col-span-1 md:col-span-2 lg:col-span-3 text-center" style={{ color: 'var(--freemyth-light)' }}>
+              Пока нет предыдущих новостей.
+            </div>
+          )}
+
+          {previous.map((item, index) => (
+            <motion.article key={item.id} className="rounded-lg overflow-hidden" style={{ backgroundColor: 'var(--freemyth-secondary)' }} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.05 * index }} whileHover={{ scale: 1.02 }}>
+              <div className="relative h-48 overflow-hidden flex items-center justify-center bg-gradient-to-br from-blue-900 to-purple-900">
+                <div className="text-center">
+                  <div className="text-6xl mb-2">{item.icon || '📰'}</div>
+                  <div className="absolute top-4 left-4">
+                    <span className="px-2 py-1 rounded text-xs font-medium" style={{ backgroundColor: getCategoryColor(item.category || item.author), color: 'white' }}>
+                      {item.category || item.author || 'Из базы'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               <div className="p-6">
                 <div className="flex justify-between items-center mb-3">
-                  <span
-                    className="text-sm"
-                    style={{ color: 'var(--freemyth-accent)' }}
-                  >
-                    {article.date}
+                  <span className="text-sm" style={{ color: 'var(--freemyth-accent)' }}>
+                    {new Date(item.created_at).toLocaleDateString()}
                   </span>
-                  <span
-                    className="text-sm"
-                    style={{ color: 'var(--freemyth-accent)' }}
-                  >
-                    {article.readTime}
+                  <span className="text-sm" style={{ color: 'var(--freemyth-accent)' }}>
+                    {item.read_time || estimateReadTime(item.content || '')}
                   </span>
                 </div>
-                
-                <h3
-                  className="text-lg font-bold mb-3"
-                  style={{ color: 'var(--freemyth-highlight)' }}
-                >
-                  {article.title}
+
+                <h3 className="text-lg font-bold mb-3" style={{ color: 'var(--freemyth-highlight)' }}>
+                  {item.title}
                 </h3>
-                
-                <p
-                  className="text-sm leading-relaxed mb-4"
-                  style={{ color: 'var(--freemyth-light)' }}
-                >
-                  {article.excerpt}
+
+                <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--freemyth-light)' }}>
+                  {item.excerpt ? item.excerpt : summarize(item.content || '', 140)}
                 </p>
-                
+
                 <GlowButton size="sm" className="w-full">
                   Читать Далее
                 </GlowButton>
               </div>
             </motion.article>
           ))}
-        </div>
+        </motion.div>
       </div>
     </div>
   );
 }
+
+/* Helpers */
+
+function summarize(text: string, maxChars = 200) {
+  if (!text) return '';
+  const stripped = text.replace(/(<([^>]+)>)/gi, '');
+  if (stripped.length <= maxChars) return stripped;
+  return stripped.slice(0, maxChars).trim() + '…';
+}
+
+function estimateReadTime(text: string) {
+  if (!text) return '1 мин чтения';
+  const stripped = text.replace(/(<([^>]+)>)/gi, '');
+  const words = stripped.trim().split(/\s+/).length || 0;
+  const minutes = Math.max(1, Math.round(words / 200));
+  return `${minutes} мин чтения`;
+}
+
+export default NewsPage;
