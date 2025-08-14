@@ -32,9 +32,11 @@ export function NewsPage() {
         const data: DbNews[] = await res.json();
         if (!mounted) return;
         setNews(Array.isArray(data) ? data : []);
-      } catch (e: any) {
+      } catch (err: unknown) {
         if (!mounted) return;
-        setError(e.message || 'Неизвестная ошибка');
+        const msg =
+          err instanceof Error ? err.message : typeof err === 'string' ? err : 'Неизвестная ошибка';
+        setError(msg);
       } finally {
         if (mounted) setLoading(false);
       }
